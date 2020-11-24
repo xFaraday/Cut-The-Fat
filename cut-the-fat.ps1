@@ -45,6 +45,7 @@ function serv {
         "WMPNetworkSvc"                            # Windows Media Player Network Sharing Service
         "XblAuthManager"                           # Xbox Live Auth Manager
         "XblGameSave"                              # Xbox Live Game Save Service
+        "XblGipSvc"
         "XboxNetApiSvc"                            # Xbox Live Networking Service
         "ndu"                                      # Windows Network Data Usage Monitor
         "xbgm"                                     # Xbox game stuff
@@ -52,8 +53,8 @@ function serv {
     )
     
     foreach ($service in $services) {
-        Stop-Service -Name $service -Force 
-        Set-Service -Name $service -StartupType Disabled -Force
+        Stop-Service -Name $service -Force -ErrorAction SilentlyContinue 
+        Set-Service -Name $service -StartupType Disabled -Force -ErrorAction Silently Continue
     }
 
 }
@@ -94,9 +95,9 @@ function update {
     set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows" WindowsUpdate
     set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" AU
     set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" NoAutoUpdate -Value 1
-    #reg add HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU /v NoAutoUpdate /t REG_DWORD /d 1 /f
+    reg add HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU /v NoAutoUpdate /t REG_DWORD /d 1 /f
     set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" AUOptions -Value 2 #Hex Dword value of 2
-    #reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" /v AUOptions /t REG_DWORD /d 2 /f
+    reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" /v AUOptions /t REG_DWORD /d 2 /f
     reg ADD "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" /v AutoInstallMinorUpdates /t REG_DWORD /d 0 /f
 
 }
@@ -174,7 +175,7 @@ function tasks {
         "ProgramDataUpdater"            #Telemetry
     )
     foreach ($task in $tasks) {
-    Get-ScheduledTask $task | Disable-ScheduledTask
+    Get-ScheduledTask | Where-Object {$_.TaskName -eq $task} | Disable-ScheduledTask
     }
 }
 
@@ -228,3 +229,5 @@ if ($All) {
 }
 
 }
+
+Invoke-FatBurn -All
