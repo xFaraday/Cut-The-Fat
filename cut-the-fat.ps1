@@ -21,11 +21,11 @@ Specifies to be run on Windows Server
 
 [CmdletBinding(DefaultParameterSetName="default")]
 Param(
-    [Parameter(ParameterSetName='All')]
+    [Parameter()]
     [switch]$All,
-    [Parameter(ParameterSetName='Win10')]
+    [Parameter()]
     [switch]$Win10,
-    [Parameter(ParameterSetName='Serv')]
+    [Parameter()]
     [switch]$Serv
 
 )
@@ -36,6 +36,8 @@ function startup {
     #White list of good startup names
     [regex]$WhiteList = 'SecurityHealth | (Default) | VMWare User Process'
     foreach ($startup in $startups) {
+    $reg=($startup).Location
+    $reg = $reg.Insert(4,':')
     Get-ItemProperty -Path ($startup).Location -Name ($startup).Name | Where-Object {$_.Name -NotMatch $WhiteList} | Set-ItemProperty -Value ([byte[]](0xEF,0xBE,0xAD,0xDE))
     }
 }
@@ -65,14 +67,12 @@ function serv {
     
     foreach ($service in $services) {
         Stop-Service -Name $service -Force -ErrorAction SilentlyContinue 
-        Set-Service -Name $service -StartupType Disabled -Force -ErrorAction Silently Continue
+        Set-Service -Name $service -StartupType Disabled -ErrorAction SilentlyContinue
     }
 
 }
 
 function visualreg {
-    reg ADD "" /v /t REG_DWORD /d /f
-
     #live tiles
     reg ADD "HKCU\Software\Policies\Microsoft\Windows\CurrentVersion\PushNotifications" /v NoTileApplicationsNotification /t REG_DWORD /d 1 /f
     #People in taskbar
@@ -85,7 +85,7 @@ function visualreg {
     reg ADD "HKCU\Control Panel\Desktop" /v AutoEndTasks /t REG_SZ /d 1 /f
     
     #APPLYING VISUAL SETTINGS FOR BEST PERFORMANCE...finally found the key
-    reg ADD "HKCU\Control Panel\Desktop" /v UserPreferencesMask /t REG_BINARY /d "90 12 03 80 10 00 00 00" /f
+    reg ADD "HKCU\Control Panel\Desktop" /v UserPreferencesMask /t REG_BINARY /d 9012038010000000 /f
 }
 
 function trackwack {
@@ -126,6 +126,12 @@ function update {
     #set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" AUOptions -Value 2 #Hex Dword value of 2
     reg ADD "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" /v AUOptions /t REG_DWORD /d 2 /f
     reg ADD "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" /v AutoInstallMinorUpdates /t REG_DWORD /d 0 /f
+
+    #DetectionFrequency enable
+    reg ADD "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" /v DetectionFrequencyEnabled /t REG_DWORD /d 1 /f
+    #DetectionFrequency interval
+    reg ADD "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" /v DetectionFrequency /t REG_DWORD /d 0x00000016 /f
+
 }
 
 function windef {
@@ -186,7 +192,7 @@ function apps {
     foreach ($App in $Apps) {
     Get-AppxPackage -Name $App | Remove-AppxPackage -ErrorAction SilentlyContinue
     Get-AppxPackage -Name $App -AllUsers | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
-    Get-AppxPriovisionedPackage -Online | Where-Object DisplayName -like $App | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
+    Get-AppxProvisionedPackage -Online | Where-Object DisplayName -like $App | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
     }
 
 }
