@@ -308,35 +308,34 @@ function keyterm {
     }
 }
 
-if ($All -and $Win10) {
-    startup
-    serv
-    visualreg
-    trackwack
-    update
-    windef
-    apps
-    tasks
-    onedrive
-    keyterm
-    reboot
-} elseif ($All -and $Serv) {
-    startup
-    serv
-    visualreg
-    trackwack
-    update
-    windef
-    apps
-    tasks
-    onedrive
-    keyterm
-    reboot
-} else {
-    Write-Warning "Check Parameters"
-}
-
-}
+    if ($All -and $Win10) {
+        startup
+        serv
+        visualreg
+        trackwack
+        update
+        windef
+        apps
+        tasks
+        onedrive
+        keyterm
+        Restart-Computer -force
+    } elseif ($All -and $Serv) {
+        startup
+        serv
+        visualreg
+        trackwack
+        update
+        windef
+        apps
+        tasks
+        onedrive
+        keyterm
+        Restart-Computer -force
+    } else {
+        Write-Warning "Check Parameters"
+        }
+    }
 
 #Invoke-FatBurn -All -Win10
 #Invoke-FatBurn -All -Serv
