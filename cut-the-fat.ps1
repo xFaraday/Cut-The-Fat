@@ -13,12 +13,11 @@ Run every script
 
 Specifies to be run on windows 10
 
-.PAREMETER Serv
+.PARAMETER Serv
 
 Specifies to be run on Windows Server
 
 #>
-
 [CmdletBinding(DefaultParameterSetName="default")]
 Param(
     [Parameter()]
@@ -27,7 +26,6 @@ Param(
     [switch]$Win10,
     [Parameter()]
     [switch]$Serv
-
 )
 
 function startup {
@@ -37,7 +35,7 @@ function startup {
     [regex]$WhiteList = 'SecurityHealth | (Default) | VMWare User Process'
     foreach ($startup in $startups) {
     $reg=($startup).Location
-    $reg = $reg.Insert(4,':')
+    $reg = $reg.Insert(0,'registry::')
     Get-ItemProperty -Path ($startup).Location -Name ($startup).Name | Where-Object {$_.Name -NotMatch $WhiteList} | Set-ItemProperty -Value ([byte[]](0xEF,0xBE,0xAD,0xDE))
     }
 }
@@ -64,12 +62,10 @@ function serv {
         "xbgm"                                     # Xbox game stuff
 
     )
-    
     foreach ($service in $services) {
         Stop-Service -Name $service -Force -ErrorAction SilentlyContinue 
         Set-Service -Name $service -StartupType Disabled -ErrorAction SilentlyContinue
     }
-
 }
 
 function visualreg {
@@ -115,7 +111,6 @@ function trackwack {
     #prevent bloatware from coming back from the dead
     #Set-ItemProperty "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" DisableWindowsConsumerFeatures -Value 1
     reg ADD "HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v DisableWindowsConsumerFeatures /t REG_DWORD /d 1 /f
-
 }
 
 function update {
@@ -132,6 +127,34 @@ function update {
     #DetectionFrequency interval
     reg ADD "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" /v DetectionFrequency /t REG_DWORD /d 0x00000016 /f
 
+    #section for background intelligence transfer service
+
+    reg ADD "HKLM\Software\Policies\Microsoft\Windows\BITS\Throttling" /v EnableBandwidthLimits /t REG_DWORD /d 1 /f 
+
+    #strict OwO
+    reg ADD "HKLM\Software\Policies\Microsoft\Windows\BITS\Throttling" /v IgnoreBandwidthLimitsOnLan /t REG_DWORD /d 0 /f
+
+    #Work days 
+    #goal is to make big work day period so that BITS is limited as much as possible as a limitation is put on work hours
+    #from sunday
+    reg ADD "HKLM\Software\Policies\Microsoft\Windows\BITS\Throttling\WorkSchedule" /v StartDay /t REG_DWORD /d 0 /f
+    #to Saturday
+    reg ADD "HKLM\Software\Policies\Microsoft\Windows\BITS\Throttling\WorkSchedule" /v EndDay /t REG_DWORD /d 6 /f
+
+    #from 12 am 
+    reg ADD "HKLM\Software\Policies\Microsoft\Windows\BITS\Throttling\WorkSchedule" /v StartHour /t REG_DWORD /d 0 /f
+    #to 10 pm
+    reg ADD "HKLM\Software\Policies\Microsoft\Windows\BITS\Throttling\WorkSchedule" /v EndHour /t REG_DWORD /d 22 /f
+
+    #LIMITATION HAMMER LADIES AND GENTLEMEN
+    reg ADD "HKLM\Software\Policies\Microsoft\Windows\BITS\Throttling\WorkSchedule" /v HighBandwidthLimit /t REG_DWORD /d 0xFFFFFFA0 /f
+    reg ADD "HKLM\Software\Policies\Microsoft\Windows\BITS\Throttling\WorkSchedule" /v NormalBandwidthLimit /t REG_DWORD /d 0xFFFFFFA0 /f
+    reg ADD "HKLM\Software\Policies\Microsoft\Windows\BITS\Throttling\WorkSchedule" /v LowBandwidthLimit /t REG_DWORD /d 0xFFFFFFA0 /f
+
+    #Unit of measure, Mbps
+    reg ADD "HKLM\Software\Policies\Microsoft\Windows\BITS\Throttling\WorkSchedule" /v HighBandwidthType /t REG_DWORD /d 2 /f
+    reg ADD "HKLM\Software\Policies\Microsoft\Windows\BITS\Throttling\WorkSchedule" /v NormalBandwidthType /t REG_DWORD /d 2 /f
+    reg ADD "HKLM\Software\Policies\Microsoft\Windows\BITS\Throttling\WorkSchedule" /v LowBandwidthType /t REG_DWORD /d 2 /f
 }
 
 function windef {
@@ -156,8 +179,6 @@ function apps {
         "*Twitter*"
         "*Facebook*"
         "*Spotify*"
-
-
         "*Microsoft.BingNews*"
         "*Microsoft.BingWeather*"
         "*Microsoft.BingSports*"
@@ -194,7 +215,6 @@ function apps {
     Get-AppxPackage -Name $App -AllUsers | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
     Get-AppxProvisionedPackage -Online | Where-Object DisplayName -like $App | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue
     }
-
 }
 
 function tasks {
@@ -246,7 +266,6 @@ function onedrive {
     Remove-Item -Path "$env:ProgramData\Microsoft OneDrive" -Recurse -Force -ErrorAction SilentlyContinue
 
     Remove-Item -Path "C:\OneDriveTemp" -Recurse -Force -ErrorAction SilentlyContinue
-
 }
 
 #credit to Alex for this part
@@ -283,12 +302,10 @@ function keyterm {
     #Windows Share Target
     "HKCR:\Extensions\ContractId\Windows.ShareTarget\PackageId\ActiproSoftwareLLC.562882FEEB491_2.6.18.18_neutral__24pqs290vpjk0"
     )
-    
     ForEach ($Key in $Keys) {
         Write-Output "Removing $Key from registry"
         Remove-Item $Key -Recurse -ErrorAction SilentlyContinue
     }
-
 }
 
 if ($All -and $Win10) {
@@ -302,6 +319,7 @@ if ($All -and $Win10) {
     tasks
     onedrive
     keyterm
+    reboot
 } elseif ($All -and $Serv) {
     startup
     serv
@@ -313,6 +331,7 @@ if ($All -and $Win10) {
     tasks
     onedrive
     keyterm
+    reboot
 } else {
     Write-Warning "Check Parameters"
 }
