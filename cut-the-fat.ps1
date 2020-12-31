@@ -308,6 +308,70 @@ function keyterm {
     }
 }
 
+function spacecleanup {
+    #SxS folder which houses a lot of junk left behind for updates, windowsstore, and uninstalling updates
+    Dism.exe /online /Cleanup-Image /StartComponentCleanup /ResetBase
+    Dism.exe /online /Cleanup-Image /SPSuperseded
+
+    function delete($folder) {
+        Remove-Item -Recurse $folder -Force -Verbose
+    }
+
+    #folders safe to remove content
+    $userfolders = (ls $env:SystemDrive\Users).Name
+    $Prefetch = "$env:SystemDrive\Windows\Prefetch\*"
+    $WinTemp = "$env:SystemDrive\Windows\Temp\*"
+    $objshell = New-Object -ComObject Shell.Application
+    $Recyclebin = $objshell.Namespace(0xA)
+    $usertemp = (Get-Childitem "env:\TEMP").Value
+    $usertempready = "$usertemp\*"
+
+    #deleting items in recyclebin
+    $Recyclebin.items() | % {Remove-Item $_.path -Recurse -verbose -confirm:$false}
+
+    #deleting items in downloads and temp
+    foreach ($user in $userfolders) {
+        $targetdownloads = "$env:SystemDrive\Users\$user\Downloads\*"
+        delete($targetdownloads)
+    }
+
+    delete($usertempready)
+    delete($Prefetch)
+    delete($WinTemp)
+
+ }
+
+function auditdisable {
+    auditpol /set /category:"Account Logon" /success:disable 
+    auditpol /set /category:"Account Logon" /failure:disable
+    auditpol /set /category:"Account Management" /success:disable
+    auditpol /set /category:"Account Management" /failure:disable
+    auditpol /set /category:"DS Access" /success:disable
+    auditpol /set /category:"DS Access" /failure:disable
+    auditpol /set /category:"Logon/Logoff" /success:disable
+    auditpol /set /category:"Logon/Logoff" /failure:disable
+    auditpol /set /category:"Object Access" /success:disable
+    auditpol /set /category:"Object Access" /failure:disable
+    auditpol /set /category:"Policy Change" /success:disable
+    auditpol /set /category:"Policy Change" /failure:disable
+    auditpol /set /category:"Privilege Use" /success:disable
+    auditpol /set /category:"Privilege Use" /failure:disable
+    auditpol /set /category:"Detailed Tracking" /success:disable
+    auditpol /set /category:"Detailed Tracking" /failure:disable
+    auditpol /set /category:"System" /success:disable 
+    auditpol /set /category:"System" /failure:disable
+}
+
+function cleanuproutine {
+    #remember to manually set settings with "cleanmgr.exe /SAGESET:77"
+    $c = New-ScheduledTaskAction -Execute "cleanmgr.exe /SAGERUN:77"
+    $T = New-ScheduledTaskTrigger -Daily -At 3am
+    $P = New-ScheduledTaskPrincipal -GroupId "BUILTIN\Administrator" -RunLevel Highest
+    $S = New-ScheduledTaskSettingsSet
+    $D = New-ScheduledTask -Action $c -Principal $P -Trigger $T -Settings $S
+    Register-ScheduledTask T1 -InputObject $D 
+}
+
     if ($All -and $Win10) {
         startup
         serv
@@ -335,7 +399,7 @@ function keyterm {
     } else {
         Write-Warning "Check Parameters"
         }
-    }
+}
 
 #Invoke-FatBurn -All -Win10
 #Invoke-FatBurn -All -Serv
